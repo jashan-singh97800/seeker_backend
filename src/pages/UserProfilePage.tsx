@@ -104,7 +104,7 @@ const UserProfilePage = () => {
 
     const handleDownloadResume = () => {
         if (profile?.resume_url) {
-            window.open(`http://localhost:3008${profile.resume_url}`, '_blank');
+            window.open(`${import.meta.env.VITE_API_BASE_URL}${profile.resume_url}`, '_blank');
         }
     };
 

@@ -28,7 +28,7 @@ const ApplicantsModal = ({ isOpen, onClose, jobId, jobTitle }: any) => {
     };
 
     const handleDownloadResume = (userId: string) => {
-        window.open(`http://localhost:3008/users/${userId}/resume`, '_blank');
+        window.open(`${import.meta.env.VITE_API_BASE_URL}/users/${userId}/resume`, '_blank');
     };
 
     if (!isOpen) return null;

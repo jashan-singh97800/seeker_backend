@@ -1,10 +1,11 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../app/hooks';
 import { selectCurrentUser, logout } from '../features/auth/authSlice';
 
 const MainLayout = () => {
     const user = useAppSelector(selectCurrentUser);
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
 
     return (
         <div className="min-h-screen flex flex-col bg-white">

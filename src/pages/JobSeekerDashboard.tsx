@@ -12,7 +12,7 @@ const TrendingUpIcon = () => (
 
 const JobSeekerDashboard = () => {
     const user = useAppSelector(selectCurrentUser);
-    const { data: stats, isLoading: statsLoading } = useGetUserStatsQuery();
+    const { data: stats } = useGetUserStatsQuery();
     const { data: userApplications, isLoading: appsLoading } = useGetMyApplicationsQuery();
 
     const getStatusIcon = (status: string) => {
