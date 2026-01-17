@@ -142,7 +142,7 @@ const ApplicantsModal = ({ isOpen, onClose, jobId, jobTitle }: any) => {
 
                                     <div className="text-sm text-gray-500 mb-3">
                                         <Calendar size={14} className="inline mr-1" />
-                                        Applied {new Date(application.created_at).toLocaleDateString()}
+                                        Applied {new Date(application.createdAt).toLocaleDateString()}
                                     </div>
 
                                     {application.status !== 'accepted' && application.status !== 'rejected' && (

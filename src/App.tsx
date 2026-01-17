@@ -9,6 +9,7 @@ import JobSeekerDashboard from './pages/JobSeekerDashboard';
 import EmployerDashboard from './pages/EmployerDashboard';
 import AdminPanel from './pages/AdminPanel';
 import RequireAuth from './features/auth/RequireAuth';
+import GoogleCallback from './pages/GoogleCallback';
 
 function App() {
   return (
@@ -18,7 +19,8 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
-        <Route path="search" element={<JobSearchPage />} />
+        <Route path="jobs" element={<JobSearchPage />} />
+        <Route path="google-callback" element={<GoogleCallback />} />
 
         {/* Protected Routes */}
         <Route element={<RequireAuth allowedRoles={['job_seeker']} />}>

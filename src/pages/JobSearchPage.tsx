@@ -1,28 +1,68 @@
 import { useState, useRef } from 'react';
-import { useGetJobsQuery } from '../app/api/jobsApiSlice';
+import { useNavigate } from 'react-router-dom';
+import { useGetJobsQuery, useGetJobQuery } from '../app/api/jobsApiSlice';
 import { useApplyForJobMutation, useGetMyApplicationsQuery } from '../app/api/applicationsApiSlice';
 import { useGetProfileQuery, useUploadResumeMutation } from '../app/api/profileApiSlice';
-import { Upload, X, AlertCircle } from 'lucide-react';
+import { Upload, X, AlertCircle, Building2, MapPin, Banknote, Clock, Briefcase } from 'lucide-react';
+import { useAppSelector } from '../app/hooks';
+import { selectCurrentUser } from '../features/auth/authSlice';
 
 const JobSearchPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
+
+    const navigate = useNavigate();
+    const user = useAppSelector(selectCurrentUser);
+
     const { data: jobs, isLoading, isError, error } = useGetJobsQuery({ search: searchTerm });
-    const { data: myApplications } = useGetMyApplicationsQuery();
-    const { data: profile } = useGetProfileQuery();
+
+    // Only fetch applications and profile if user is logged in
+    const { data: myApplications } = useGetMyApplicationsQuery(undefined, {
+        skip: !user
+    });
+
+    const { data: profile } = useGetProfileQuery(undefined, {
+        skip: !user
+    });
+
     const [applyForJob, { isLoading: isApplying }] = useApplyForJobMutation();
     const [uploadResume, { isLoading: isUploading }] = useUploadResumeMutation();
+
+    // State for Modals
     const [showResumeModal, setShowResumeModal] = useState(false);
+    const [showJobDetailModal, setShowJobDetailModal] = useState(false);
     const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+    const [jobToApply, setJobToApply] = useState<string | null>(null);
+
+
     const [uploadError, setUploadError] = useState('');
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleApplyClick = (jobId: string) => {
+    // Fetch single job details when a job is selected for view
+    // This also triggers the view increment on default unless owner
+    const { data: selectedJobDetails, isFetching: isFetchingJob } = useGetJobQuery(selectedJobId ?? '', {
+        skip: !selectedJobId
+    });
+
+    const handleJobClick = (jobId: string) => {
+        setSelectedJobId(jobId);
+        setShowJobDetailModal(true);
+    };
+
+    const handleApplyClick = (jobId: string, e?: React.MouseEvent) => {
+        e?.stopPropagation(); // Prevent opening the detail modal if clicking apply directly from list
+
+        // If not logged in, redirect to login page
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+
         // Check if user has a resume
         if (!profile?.resume_url) {
-            setSelectedJobId(jobId);
+            setJobToApply(jobId);
             setShowResumeModal(true);
             return;
         }
@@ -38,7 +78,9 @@ const JobSearchPage = () => {
             setSuccessMsg('Application submitted successfully!');
             setTimeout(() => setSuccessMsg(''), 3000);
             setShowResumeModal(false);
-            setSelectedJobId(null);
+            setJobToApply(null);
+            // Optionally close job detail modal if open
+            // setShowJobDetailModal(false); 
         } catch (err: any) {
             console.error('Failed to apply:', err);
             setErrorMsg(err?.data?.message || 'Failed to submit application.');
@@ -50,7 +92,6 @@ const JobSearchPage = () => {
         if (file.type !== 'application/pdf') {
             return 'Only PDF files are allowed';
         }
-        // Limit removed as per backend changes
         return null;
     };
 
@@ -67,8 +108,8 @@ const JobSearchPage = () => {
             setSuccessMsg('Resume uploaded successfully! You can now apply.');
             setTimeout(() => setSuccessMsg(''), 3000);
             // After successful upload, apply for the job
-            if (selectedJobId) {
-                setTimeout(() => handleApply(selectedJobId), 500);
+            if (jobToApply) {
+                setTimeout(() => handleApply(jobToApply), 500);
             }
         } catch (err) {
             setUploadError('Failed to upload resume. Please try again.');
@@ -139,13 +180,13 @@ const JobSearchPage = () => {
                 )}
 
                 {successMsg && (
-                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-lg text-center mb-4">
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-lg text-center mb-4 sticky top-24 z-30 shadow-lg">
                         {successMsg}
                     </div>
                 )}
 
                 {errorMsg && (
-                    <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-lg text-center mb-4">
+                    <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-lg text-center mb-4 sticky top-24 z-30 shadow-lg">
                         {errorMsg}
                     </div>
                 )}
@@ -157,40 +198,145 @@ const JobSearchPage = () => {
                 )}
 
                 {!isLoading && !isError && jobs?.map((job: any) => (
-                    <div key={job.id} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:border-primary hover:shadow-md transition-all cursor-pointer group">
+                    <div
+                        key={job.id}
+                        onClick={() => handleJobClick(job.id)}
+                        className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:border-primary hover:shadow-md transition-all cursor-pointer group relative"
+                    >
                         <div className="flex justify-between items-start">
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors">{job.title}</h2>
-                                <p className="text-gray-600 font-medium">{job.company?.name || 'Unknown Company'}</p>
+                                <p className="text-gray-600 font-medium flex items-center mt-1">
+                                    <Building2 size={16} className="mr-1" />
+                                    {job.company?.name || 'Unknown Company'}
+                                </p>
                                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">
-                                    <span className="flex items-center">📍 {job.location || 'Remote'}</span>
-                                    <span className="flex items-center">💰 {job.salary_range || 'Competitive'}</span>
-                                    <span className="px-2 py-1 bg-gray-100 rounded-md text-gray-700 text-xs font-semibold uppercase">{job.type || 'Full-time'}</span>
+                                    <span className="flex items-center"><MapPin size={16} className="mr-1 text-gray-400" /> {job.location || 'Remote'}</span>
+                                    <span className="flex items-center"><Banknote size={16} className="mr-1 text-gray-400" /> {job.salary_range || 'Competitive'}</span>
+                                    <span className="px-2 py-1 bg-gray-100 rounded-md text-gray-700 text-xs font-semibold uppercase flex items-center">
+                                        <Briefcase size={12} className="mr-1" />
+                                        {job.type || 'Full-time'}
+                                    </span>
                                 </div>
                             </div>
                             <button
-                                onClick={() => handleApplyClick(job.id)}
+                                onClick={(e) => handleApplyClick(job.id, e)}
                                 disabled={isApplying || hasApplied(job.id)}
-                                className={`text-primary font-semibold border border-primary px-4 py-2 rounded-md transition-all whitespace-nowrap 
+                                className={`text-primary font-semibold border border-primary px-4 py-2 rounded-md transition-all whitespace-nowrap z-10 
                                     ${isApplying || hasApplied(job.id) ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:bg-blue-600 hover:text-white'}`}
                             >
-                                {isApplying ? 'Applying...' : hasApplied(job.id) ? 'Applied' : 'Apply Now'}
+                                {isApplying && jobToApply === job.id ? 'Applying...' : hasApplied(job.id) ? 'Applied' : 'Apply Now'}
                             </button>
                         </div>
                     </div>
                 ))}
             </div>
 
+            {/* Job Detail Modal */}
+            {showJobDetailModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl my-8 relative flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="p-8 border-b border-gray-100 flex justify-between items-start sticky top-0 bg-white rounded-t-3xl z-10">
+                            <div className="pr-12">
+                                <h2 className="text-3xl font-black text-gray-900 mb-2">{isFetchingJob ? 'Loading...' : selectedJobDetails?.title}</h2>
+                                <div className="flex items-center text-gray-600 font-medium">
+                                    <Building2 size={18} className="mr-2" />
+                                    {selectedJobDetails?.company?.name}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowJobDetailModal(false);
+                                    setSelectedJobId(null);
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors absolute right-6 top-6"
+                            >
+                                <X size={24} className="text-gray-500" />
+                            </button>
+                        </div>
+
+                        {/* Scrollable Content */}
+                        <div className="p-8 overflow-y-auto custom-scrollbar">
+                            {isFetchingJob ? (
+                                <div className="flex justify-center py-20">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                                </div>
+                            ) : selectedJobDetails ? (
+                                <div className="space-y-8">
+                                    <div className="flex flex-wrap gap-4 text-sm font-medium">
+                                        <div className="flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-xl border border-blue-100">
+                                            <MapPin size={18} className="mr-2" />
+                                            {selectedJobDetails.location}
+                                        </div>
+                                        <div className="flex items-center px-4 py-2 bg-green-50 text-green-700 rounded-xl border border-green-100">
+                                            <Banknote size={18} className="mr-2" />
+                                            {selectedJobDetails.salary_range}
+                                        </div>
+                                        <div className="flex items-center px-4 py-2 bg-purple-50 text-purple-700 rounded-xl border border-purple-100">
+                                            <Briefcase size={18} className="mr-2" />
+                                            {selectedJobDetails.type}
+                                        </div>
+                                        <div className="flex items-center px-4 py-2 bg-orange-50 text-orange-700 rounded-xl border border-orange-100">
+                                            <Clock size={18} className="mr-2" />
+                                            Posted {new Date(selectedJobDetails.createdAt).toLocaleDateString()}
+                                        </div>
+                                    </div>
+
+                                    <div className="prose prose-blue max-w-none">
+                                        <h3 className="text-xl font-bold text-gray-900 mb-4">About the Role</h3>
+                                        <div className="text-gray-600 leading-relaxed whitespace-pre-wrap">
+                                            {selectedJobDetails.description}
+                                        </div>
+
+                                        {selectedJobDetails.requirements && (
+                                            <>
+                                                <h3 className="text-xl font-bold text-gray-900 mt-8 mb-4">Requirements</h3>
+                                                <div className="text-gray-600 leading-relaxed whitespace-pre-wrap">
+                                                    {selectedJobDetails.requirements}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-20 text-gray-500">
+                                    Job details not available.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer Action */}
+                        <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-3xl flex justify-between items-center sticky bottom-0">
+                            <div>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Interested?</p>
+                                <p className="text-sm font-medium text-gray-600">Don't miss this opportunity</p>
+                            </div>
+                            <button
+                                onClick={() => handleApplyClick(selectedJobDetails?.id || '')}
+                                disabled={isApplying || hasApplied(selectedJobDetails?.id || '')}
+                                className={`px-10 py-4 rounded-xl font-bold text-lg shadow-xl transition-all active:scale-95 flex items-center
+                                    ${isApplying || hasApplied(selectedJobDetails?.id || '')
+                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed shadow-none'
+                                        : 'premium-gradient text-white hover:shadow-primary/30 hover:scale-[1.02]'}`}
+                            >
+                                {isApplying && jobToApply === selectedJobDetails?.id ? 'Sending...' : hasApplied(selectedJobDetails?.id || '') ? 'Applied' : 'Apply Now'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Resume Upload Modal */}
             {showResumeModal && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
+                    <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-fade-in-up">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-2xl font-black text-gray-900">Upload Resume Required</h3>
                             <button
                                 onClick={() => {
                                     setShowResumeModal(false);
-                                    setSelectedJobId(null);
+                                    setJobToApply(null);
                                     setUploadError('');
                                 }}
                                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -202,7 +348,7 @@ const JobSearchPage = () => {
                         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start space-x-3">
                             <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
                             <p className="text-sm text-blue-700 font-semibold">
-                                You need to upload a resume before applying for jobs. Please upload your resume (PDF only).
+                                You need to upload a resume before applying. Please upload a PDF.
                             </p>
                         </div>
 

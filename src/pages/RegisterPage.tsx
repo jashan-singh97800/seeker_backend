@@ -23,6 +23,9 @@ const RegisterPage = () => {
         try {
             const userData = await register({ email, password, role }).unwrap();
             dispatch(setCredentials(userData as any));
+            setEmail('');
+            setPassword('');
+            setRole('job_seeker');
 
             const userRole = userData.user?.role;
             if (userRole === 'employer') {
@@ -65,7 +68,7 @@ const RegisterPage = () => {
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
                     <div className="space-y-2">
                         <label className="block text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Email Address</label>
                         <input
@@ -75,6 +78,7 @@ const RegisterPage = () => {
                             placeholder="you@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            autoComplete="new-password"
                         />
                     </div>
                     <div className="space-y-2">
@@ -86,6 +90,7 @@ const RegisterPage = () => {
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            autoComplete="new-password"
                         />
                     </div>
                     <div className="space-y-2">
@@ -111,7 +116,16 @@ const RegisterPage = () => {
                 <div className="mt-10 text-center">
                     <p className="text-gray-500 font-bold text-sm">
                         Already have an account?{' '}
-                        <Link to="/login" className="text-blue-600 hover:underline">
+                        <Link
+                            to="/login"
+                            className="text-blue-600 hover:underline"
+                            onClick={() => {
+                                setEmail('');
+                                setPassword('');
+                                setErrMsg('');
+                                setRole('job_seeker');
+                            }}
+                        >
                             Sign In
                         </Link>
                     </p>
