@@ -19,7 +19,7 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
-        <Route path="jobs" element={<JobSearchPage />} />
+        <Route path="search" element={<JobSearchPage />} />
         <Route path="google-callback" element={<GoogleCallback />} />
 
         {/* Protected Routes */}

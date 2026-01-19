@@ -48,7 +48,7 @@ const LoginPage = () => {
     };
 
     const handleGoogleLogin = (role: string) => {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+        const baseUrl = import.meta.env.VITE_API_BASE_URL;
         window.location.href = `${baseUrl}/auth/google?role=${role}`;
     };
 
